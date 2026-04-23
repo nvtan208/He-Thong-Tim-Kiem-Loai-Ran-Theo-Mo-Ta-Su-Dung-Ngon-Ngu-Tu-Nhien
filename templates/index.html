@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/static/snake.png" type="image/png">
+    <title>Tìm Kiếm Loài Rắn - Snake Search</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .search-section {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab-btn {
+            padding: 12px 20px;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-size: 0.95em;
+            font-weight: 600;
+            color: #999;
+            transition: all 0.3s;
+        }
+
+        .tab-btn:hover {
+            color: #667eea;
+        }
+
+        .tab-btn.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .file-name {
+            padding: 12px 20px;
+            background: #f5f5f5;
+            border: 2px dashed #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            display: inline-block;
+            transition: all 0.3s;
+            flex: 1;
+            text-align: center;
+        }
+
+        .file-name:hover {
+            border-color: #667eea;
+            background: #f9f7ff;
+        }
+
+        .fusion-weights {
+            background: #f9f7ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .fusion-weights label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .weight-slider {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .weight-slider label {
+            margin: 0;
+            min-width: 80px;
+        }
+
+        .weight-slider input[type="range"] {
+            flex: 1;
+        }
+
+        .weight-slider span {
+            min-width: 50px;
+            text-align: right;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .search-box input {
+            flex: 1;
+            padding: 12px 20px;
+            font-size: 1em;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            transition: border-color 0.3s;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .control-group label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .control-group input[type="range"] {
+            width: 150px;
+        }
+
+        .control-group input[type="number"] {
+            width: 70px;
+            padding: 8px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 0.95em;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            font-size: 1em;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .btn-search {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-search:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-search:active {
+            transform: translateY(0);
+        }
+
+        .btn-search.loading {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results-section {
+            display: none;
+        }
+
+        .results-header {
+            color: white;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .snake-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .snake-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+        }
+
+        .snake-image {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+            background: #f0f0f0;
+        }
+
+        .snake-content {
+            padding: 20px;
+        }
+
+        .rank-badge {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .rank-badge.rank-1 {
+            background: #ffd700;
+            color: #333;
+        }
+
+        .rank-badge.rank-2 {
+            background: #c0c0c0;
+        }
+
+        .rank-badge.rank-3 {
+            background: #cd7f32;
+            color: white;
+        }
+
+        .snake-name {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+            font-style: italic;
+        }
+
+        .score {
+            display: inline-block;
+            background: #f0f0f0;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .snake-info {
+            font-size: 0.95em;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .info-item {
+            margin-bottom: 10px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #333;
+            min-width: 80px;
+        }
+
+        .toxic-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
+        .toxic-badge.poisonous {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .toxic-badge.safe {
+            background: #51cf66;
+            color: white;
+        }
+
+        .error-message {
+            background: #ff6b6b;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .no-results {
+            text-align: center;
+            color: white;
+            padding: 40px;
+            font-size: 1.2em;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .search-box {
+                flex-direction: column;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🐍 Tìm Kiếm Loài Rắn</h1>
+            <p class="subtitle">Snake Species Search - Tìm kiếm theo mô tả ngôn ngữ tự nhiên</p>
+        </header>
+
+        <div class="search-section">
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="text-search">📝 Tìm Theo Mô Tả</button>
+                <button class="tab-btn" data-tab="image-search">🖼️ Tìm Theo Hình Ảnh</button>
+                <button class="tab-btn" data-tab="fusion-search">🔀 Tìm Kết Hợp (Text + Ảnh)</button>
+            </div>
+
+            <!-- Text Search Tab -->
+            <div id="text-search" class="tab-content active">
+                <div class="search-box">
+                    <input 
+                        type="text" 
+                        id="textQuery" 
+                        placeholder="Mô tả loài rắn... (ví dụ: rắn xanh, rắn độc, có vân ngang, ...)"
+                        autocomplete="off"
+                    />
+                </div>
+            </div>
+
+            <!-- Image Search Tab -->
+            <div id="image-search" class="tab-content">
+                <div class="search-box">
+                    <input 
+                        type="file" 
+                        id="imageInput" 
+                        accept="image/*"
+                        class="file-input"
+                    />
+                    <span id="imageFileName" class="file-name">Chọn hình ảnh...</span>
+                </div>
+            </div>
+
+            <!-- Fusion Search Tab -->
+            <div id="fusion-search" class="tab-content">
+                <div class="search-box">
+                    <input 
+                        type="text" 
+                        id="fusionQuery" 
+                        placeholder="Mô tả loài rắn..."
+                        autocomplete="off"
+                    />
+                </div>
+                <div class="search-box">
+                    <input 
+                        type="file" 
+                        id="fusionImage" 
+                        accept="image/*"
+                        class="file-input"
+                    />
+                    <span id="fusionFileName" class="file-name">Chọn hình ảnh...</span>
+                </div>
+                <div class="fusion-weights">
+                    <label>Tỉ lệ:</label>
+                    <div class="weight-slider">
+                        <label>Hình ảnh:</label>
+                        <input type="range" id="imageWeight" min="0" max="100" value="70" />
+                        <span id="imageWeightValue">70%</span>
+                    </div>
+                    <div class="weight-slider">
+                        <label>Text:</label>
+                        <span id="textWeightValue">30%</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <div class="control-group">
+                    <label for="topKSlider">Số kết quả:</label>
+                    <input 
+                        type="range" 
+                        id="topKSlider" 
+                        min="1" 
+                        max="10" 
+                        value="5"
+                    />
+                    <input 
+                        type="number" 
+                        id="topKNumber" 
+                        min="1" 
+                        max="10" 
+                        value="5"
+                    />
+                </div>
+                <button class="btn btn-search" id="searchBtn">Tìm Kiếm</button>
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Đang tìm kiếm...</p>
+            </div>
+
+            <div class="error-message" id="errorMessage"></div>
+        </div>
+
+        <div class="results-section" id="resultsSection">
+            <div class="results-header" id="resultsHeader"></div>
+            <div class="results-grid" id="resultsGrid"></div>
+        </div>
+    </div>
+
+    <script>
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const textQuery = document.getElementById('textQuery');
+        const imageInput = document.getElementById('imageInput');
+        const imageFileName = document.getElementById('imageFileName');
+        const fusionQuery = document.getElementById('fusionQuery');
+        const fusionImage = document.getElementById('fusionImage');
+        const fusionFileName = document.getElementById('fusionFileName');
+        const topKSlider = document.getElementById('topKSlider');
+        const topKNumber = document.getElementById('topKNumber');
+        const imageWeight = document.getElementById('imageWeight');
+        const imageWeightValue = document.getElementById('imageWeightValue');
+        const textWeightValue = document.getElementById('textWeightValue');
+        const searchBtn = document.getElementById('searchBtn');
+        const loading = document.getElementById('loading');
+        const errorMessage = document.getElementById('errorMessage');
+        const resultsSection = document.getElementById('resultsSection');
+        const resultsHeader = document.getElementById('resultsHeader');
+        const resultsGrid = document.getElementById('resultsGrid');
+
+        // Tab switching
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Remove active class from all
+                tabBtns.forEach(b => b.classList.remove('active'));
+                tabContents.forEach(c => c.classList.remove('active'));
+                
+                // Add active class to clicked
+                btn.classList.add('active');
+                const tabId = btn.getAttribute('data-tab');
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
+
+        // File input handlers
+        imageInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                imageFileName.textContent = e.target.files[0].name;
+            }
+        });
+
+        fusionImage.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                fusionFileName.textContent = e.target.files[0].name;
+            }
+        });
+
+        imageFileName.addEventListener('click', () => imageInput.click());
+        fusionFileName.addEventListener('click', () => fusionImage.click());
+
+        // Range and number sync
+        topKSlider.addEventListener('input', () => {
+            topKNumber.value = topKSlider.value;
+        });
+
+        topKNumber.addEventListener('input', () => {
+            topKNumber.value = Math.max(1, Math.min(10, topKNumber.value));
+            topKSlider.value = topKNumber.value;
+        });
+
+        // Image weight slider
+        imageWeight.addEventListener('input', () => {
+            const imgWeight = parseInt(imageWeight.value);
+            const txtWeight = 100 - imgWeight;
+            imageWeightValue.textContent = imgWeight + '%';
+            textWeightValue.textContent = txtWeight + '%';
+        });
+
+        // Search button
+        searchBtn.addEventListener('click', performSearch);
+
+        // Enter key in text inputs
+        textQuery.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') performSearch();
+        });
+        fusionQuery.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') performSearch();
+        });
+
+        async function performSearch() {
+            const activeTab = document.querySelector('.tab-content.active').id;
+            const topK = parseInt(topKNumber.value);
+
+            loading.style.display = 'block';
+            errorMessage.style.display = 'none';
+            resultsSection.style.display = 'none';
+            searchBtn.disabled = true;
+            searchBtn.classList.add('loading');
+
+            try {
+                let response;
+
+                if (activeTab === 'text-search') {
+                    const query = textQuery.value.trim();
+                    if (!query) {
+                        showError('Vui lòng nhập mô tả!');
+                        return;
+                    }
+                    response = await fetch('/api/search/text', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({query, top_k: topK})
+                    });
+                } 
+                else if (activeTab === 'image-search') {
+                    if (imageInput.files.length === 0) {
+                        showError('Vui lòng chọn hình ảnh!');
+                        return;
+                    }
+                    const formData = new FormData();
+                    formData.append('image', imageInput.files[0]);
+                    formData.append('top_k', topK);
+                    response = await fetch('/api/search/image', {
+                        method: 'POST',
+                        body: formData
+                    });
+                } 
+                else if (activeTab === 'fusion-search') {
+                    const query = fusionQuery.value.trim();
+                    if (!query) {
+                        showError('Vui lòng nhập mô tả!');
+                        return;
+                    }
+                    if (fusionImage.files.length === 0) {
+                        showError('Vui lòng chọn hình ảnh!');
+                        return;
+                    }
+                    const formData = new FormData();
+                    formData.append('query', query);
+                    formData.append('image', fusionImage.files[0]);
+                    formData.append('top_k', topK);
+                    formData.append('image_weight', parseInt(imageWeight.value) / 100);
+                    response = await fetch('/api/search/fusion', {
+                        method: 'POST',
+                        body: formData
+                    });
+                }
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Search failed');
+                }
+
+                const data = await response.json();
+                displayResults(data);
+
+            } catch (error) {
+                console.error('Search error:', error);
+                showError('Lỗi: ' + error.message);
+            } finally {
+                loading.style.display = 'none';
+                searchBtn.disabled = false;
+                searchBtn.classList.remove('loading');
+            }
+        }
+
+        function displayResults(data) {
+            const searchType = {
+                'text': '📝 Tìm Theo Mô Tả',
+                'image': '🖼️ Tìm Theo Hình Ảnh',
+                'fusion': '🔀 Tìm Kết Hợp'
+            };
+
+            if (data.results.length === 0) {
+                resultsHeader.innerHTML = `
+                    <p style="margin: 0;">Không tìm thấy kết quả nào</p>
+                `;
+                resultsSection.style.display = 'block';
+                return;
+            }
+
+            let headerText = `Tìm thấy <strong>${data.results.length}</strong> kết quả`;
+            if (data.query) {
+                headerText += ` cho: "<strong>${data.query}</strong>"`;
+            }
+            if (data.search_type === 'fusion') {
+                headerText += ` (${Math.round(data.image_weight*100)}% hình, ${Math.round(data.text_weight*100)}% text)`;
+            }
+
+            resultsHeader.innerHTML = `<p style="margin: 0;">${headerText}</p>`;
+
+            resultsGrid.innerHTML = data.results.map((result) => `
+                <div class="snake-card">
+                    <img src="/serve_image/${result.image_path}" alt="${result.binomial}" class="snake-image" onerror="this.src='/static/placeholder.png'">
+                    <div class="snake-content">
+                        <div class="rank-badge rank-${result.rank}">Thứ ${result.rank}</div>
+                        <div class="score">Điểm: ${result.score.toFixed(3)}</div>
+                        <div class="snake-name">${result.binomial}</div>
+                        <div class="snake-info">
+                            <div class="info-item">
+                                <span class="info-label">ID Lớp:</span>
+                                <span>${result.class_id}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Quốc gia:</span>
+                                <span>${result.country}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Lục địa:</span>
+                                <span>${result.continent}</span>
+                            </div>
+                            <div class="toxic-badge ${result.poisonous ? 'poisonous' : 'safe'}">
+                                ${result.poisonous ? '⚠️ Rắn độc' : '✓ Không độc'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            resultsSection.style.display = 'block';
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+        }
+
+        window.addEventListener('load', () => {
+            textQuery.focus();
+        });
+    </script>
+</body>
+</html>
