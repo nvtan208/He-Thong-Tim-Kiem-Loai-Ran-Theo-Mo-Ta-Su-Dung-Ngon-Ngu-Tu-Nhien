@@ -7,7 +7,15 @@ from flask import Flask, render_template, request, jsonify
 from PIL import Image
 from transformers import CLIPProcessor, CLIPModel
 from werkzeug.utils import secure_filename
-from googletrans import Translator
+
+# Try to import translator
+try:
+    from deep_translator import GoogleTranslator
+    translator = GoogleTranslator(source='vi', target='en')
+    print("[OK] Translator initialized successfully")
+except Exception as e:
+    print(f"[WARN] Translator initialization failed ({e}), using fallback (no translation)")
+    translator = None
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
@@ -19,10 +27,6 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 print("Loading CLIP model...")
 model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32").to(device)
 processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
-
-# Initialize translator
-print("Initializing translator...")
-translator = Translator()
 
 # Load FAISS index and metadata
 # ⚠️ IMPORTANT: FAISS index contains ONLY image embeddings (normalized L2)
@@ -36,26 +40,25 @@ print(f"Loaded {len(metadata)} metadata entries")
 
 def translate_to_english(text):
     """Translate Vietnamese text to English before encoding"""
+    if translator is None:
+        print(f"[TRANSLATE] Translator not available, using original text: '{text}'")
+        return text
+    
     try:
-        # Detect language
-        detection = translator.detect(text)
-        detected_lang = detection.lang if hasattr(detection, 'lang') else str(detection)
-        
-        # Vietnamese diacritical marks (ặ, ấ, â, ơ, ư, etc.)
+        # Check if text contains Vietnamese characters
         vietnamese_chars = 'àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ'
         has_vietnamese_chars = any(c in text.lower() for c in vietnamese_chars)
         
-        # If text contains Vietnamese characters or is detected as Vietnamese, translate
-        if detected_lang == 'vi' or has_vietnamese_chars:
-            translated = translator.translate(text, src='vi', dest='en')
-            translated_text = translated.text if hasattr(translated, 'text') else str(translated)
+        if has_vietnamese_chars:
+            # Translate using deep_translator
+            translated_text = translator.translate(text)
             print(f"[TRANSLATE] Vietnamese detected: '{text}' -> '{translated_text}'")
             return translated_text
         else:
-            print(f"[TRANSLATE] Not Vietnamese (detected: {detected_lang}), using original text")
+            print(f"[TRANSLATE] Not Vietnamese, using original text: '{text}'")
             return text
     except Exception as e:
-        print(f"[TRANSLATE ERROR] {str(e)}, using original text")
+        print(f"[TRANSLATE ERROR] {str(e)}, using original text: '{text}'")
         return text
 
 def get_text_embedding(text):
@@ -63,8 +66,11 @@ def get_text_embedding(text):
     inputs = processor(text=text, return_tensors="pt", padding=True).to(device)
     
     with torch.no_grad():
-        text_features = model.get_text_features(**inputs)
-        text_features = text_features / text_features.norm(dim=-1, keepdim=True)
+        outputs = model.get_text_features(**inputs)
+        # Extract tensor from output
+        text_features = outputs if isinstance(outputs, torch.Tensor) else outputs.pooler_output
+        # Normalize the features
+        text_features = text_features / (text_features.norm(dim=-1, keepdim=True) + 1e-8)
     
     return text_features.cpu().numpy()
 
@@ -73,8 +79,11 @@ def get_image_embedding(image_pil):
     inputs = processor(images=image_pil, return_tensors="pt").to(device)
     
     with torch.no_grad():
-        image_features = model.get_image_features(**inputs)
-        image_features = image_features / image_features.norm(dim=-1, keepdim=True)
+        outputs = model.get_image_features(**inputs)
+        # Extract tensor from output
+        image_features = outputs if isinstance(outputs, torch.Tensor) else outputs.pooler_output
+        # Normalize the features
+        image_features = image_features / (image_features.norm(dim=-1, keepdim=True) + 1e-8)
     
     return image_features.cpu().numpy()
 

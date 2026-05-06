@@ -1,17 +1,12 @@
 # Virtual environment
 .venv/
 
-# Large folders
+# Archive folder
 archive/
 
 # Python cache
 __pycache__/
 *.pyc
 
-# Large files
-*.pkl
-*.index
-*.npy
-
-# IDE
+# VSCode (nếu có)
 .vscode/
